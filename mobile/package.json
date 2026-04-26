@@ -1,0 +1,29 @@
+{
+  "name": "vibematch-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "web": "expo start --web",
+    "build:ios": "eas build --platform ios",
+    "build:android": "eas build --platform android",
+    "submit:ios": "eas submit --platform ios",
+    "submit:android": "eas submit --platform android"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.3",
+    "expo": "~50.0.0",
+    "expo-image-picker": "~14.7.1",
+    "expo-notifications": "~0.27.6",
+    "expo-secure-store": "~12.8.1",
+    "react": "18.2.0",
+    "react-native": "0.73.6"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "eas-cli": "^7.8.0"
+  }
+}
