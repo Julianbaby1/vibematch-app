@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "VibeMatch",
+    "slug": "vibematch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "vibematch",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.julianwheeler.vibematch",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "VibeMatch lets you choose profile photos from your photo library."
+      }
+    },
+    "android": {
+      "package": "com.julianwheeler.vibematch",
+      "permissions": ["READ_MEDIA_IMAGES", "POST_NOTIFICATIONS"]
+    },
+    "plugins": [
+      "expo-image-picker",
+      "expo-notifications",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "replace-with-your-expo-project-id"
+      }
+    }
+  }
+}
