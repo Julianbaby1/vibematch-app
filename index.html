@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeMatch</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>VibeMatch</h1>
+      <p>Meet people by personality, energy, and real conversation.</p>
+    </div>
+    <button id="resetBtn">Reset Demo</button>
+  </header>
+
+  <main class="layout">
+    <section class="panel hero-card">
+      <h2>Find your kind of vibe</h2>
+      <p>No endless swiping circus. VibeMatch keeps it simple: browse, like, match, and start a conversation.</p>
+      <div class="signup-box">
+        <input id="nameInput" type="text" placeholder="Your name" />
+        <input id="interestInput" type="text" placeholder="One interest, like music or movies" />
+        <button id="saveProfileBtn">Create Demo Profile</button>
+      </div>
+      <p id="profileStatus" class="status"></p>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Browse Profiles</h2>
+        <span id="profileCount"></span>
+      </div>
+      <div id="profiles" class="cards"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Your Matches</h2>
+      <div id="matches" class="match-list"></div>
+    </section>
+
+    <section class="panel chat-panel">
+      <h2>Chat Preview</h2>
+      <div id="chatBox" class="chat-box"></div>
+      <div class="chat-input">
+        <input id="chatInput" type="text" placeholder="Type a message..." />
+        <button id="sendBtn">Send</button>
+      </div>
+    </section>
+
+    <section class="panel games-panel">
+      <h2>Mini Games</h2>
+      <div class="game-grid">
+        <div class="game-card">
+          <h3>Vibe Quiz</h3>
+          <p id="quizQuestion"></p>
+          <button class="quizAnswer" data-score="1">Chill night in</button>
+          <button class="quizAnswer" data-score="2">Dinner and music</button>
+          <button class="quizAnswer" data-score="3">Adventure day</button>
+          <p id="quizResult" class="status"></p>
+        </div>
+        <div class="game-card">
+          <h3>Reaction Game</h3>
+          <p>Tap when the button says GO.</p>
+          <button id="reactionBtn">Start</button>
+          <p id="reactionResult" class="status"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
