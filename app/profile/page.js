@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getUser, saveUser } from '../../lib/api';
 import Navbar from '../../components/Navbar';
@@ -8,14 +8,29 @@ import Badge from '../../components/Badge';
 
 const LIFE_STAGES = ['single', 'divorced', 'widowed', 'separated', 'other'];
 
+function Toast({ message, type = 'success', onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className="toast-container">
+      <div className={`toast toast-${type}`}>{message}</div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [form, setForm] = useState(null);
+  const router      = useRouter();
+  const fileInput   = useRef(null);
+  const [user, setUser]           = useState(null);
+  const [form, setForm]           = useState(null);
   const [interests, setInterests] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [toast, setToast]         = useState(null);
+
+  const showToast = (message, type = 'success') => setToast({ message, type });
 
   useEffect(() => {
     const cached = getUser();
@@ -27,10 +42,10 @@ export default function ProfilePage() {
       saveUser(data);
       setForm({
         first_name: data.first_name || '',
-        life_stage:  data.life_stage || '',
-        bio:         data.bio || '',
-        location:    data.location || '',
-        city:        data.city || '',
+        life_stage: data.life_stage || '',
+        bio:        data.bio        || '',
+        location:   data.location   || '',
+        city:       data.city       || '',
       });
       setInterests((data.interests || []).join(', '));
     }).catch(() => router.replace('/login'));
@@ -41,23 +56,62 @@ export default function ProfilePage() {
   async function handleSave(e) {
     e.preventDefault();
     setSaving(true);
-    setError('');
-    setSuccess('');
     try {
       await api.put('/api/users/profile', {
         ...form,
         interests: interests.split(',').map((i) => i.trim()).filter(Boolean),
       });
-      setSuccess('Profile updated successfully.');
       const updated = await api.get('/api/auth/me');
       setUser(updated);
       saveUser(updated);
+      showToast('Profile updated successfully ✓');
     } catch (err) {
-      setError(err.message);
+      showToast(err.message || 'Failed to save changes', 'error');
     } finally {
       setSaving(false);
     }
   }
+
+  async function handlePhotoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Photo must be under 5 MB', 'error');
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const result = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/users/upload/photo`, {
+        method: 'POST',
+        body: fd,
+        headers: {
+          // No Content-Type — browser sets it with boundary for multipart
+          ...(await (async () => {
+            const { supabase } = await import('../../lib/supabase');
+            const { data: { session } } = await supabase.auth.getSession();
+            return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+          })()),
+        },
+      });
+      const data = await result.json();
+      if (!result.ok) throw new Error(data.error || 'Upload failed');
+      const updated = await api.get('/api/auth/me');
+      setUser(updated);
+      saveUser(updated);
+      showToast('Photo updated ✓');
+    } catch (err) {
+      showToast(err.message || 'Photo upload failed', 'error');
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  }
+
+  const age = user?.date_of_birth
+    ? Math.floor((Date.now() - new Date(user.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25))
+    : null;
 
   if (!form) return (
     <>
@@ -66,13 +120,10 @@ export default function ProfilePage() {
     </>
   );
 
-  const age = user?.date_of_birth
-    ? Math.floor((Date.now() - new Date(user.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25))
-    : null;
-
   return (
     <>
       <Navbar user={user} />
+      {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
       <div className="main-content">
         <div className="page-wrapper" style={{ paddingTop: '2rem', paddingBottom: '3rem', maxWidth: 760 }}>
           <div className="page-title">
@@ -80,33 +131,61 @@ export default function ProfilePage() {
             <p>Keep your profile up to date to attract the right connections.</p>
           </div>
 
-          {/* ── Profile header preview ── */}
+          {/* ── Profile preview header ── */}
           <div className="card" style={{ marginBottom: '1.5rem' }}>
             <div className="profile-header">
-              <div className="avatar avatar-xl" style={{ background: 'var(--surface-2)', fontSize: '2.5rem', flexShrink: 0 }}>
-                {user?.profile_photo_url
-                  ? <img src={user.profile_photo_url} alt={user.first_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                  : <span>{user?.first_name?.[0]}</span>}
-              </div>
-              <div>
-                <h2>{user?.first_name}{age ? `, ${age}` : ''}</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '.5rem' }}>
-                  {user?.city || 'Location not set'} · {user?.life_stage || 'Life stage not set'}
-                </p>
-                <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
-                  {(user?.badges || []).map((b) => <Badge key={b.badge_type} type={b.badge_type} />)}
+              {/* Photo + upload */}
+              <div className="profile-photo-wrap" style={{ flexShrink: 0 }}>
+                <div
+                  className="avatar avatar-xl"
+                  style={{
+                    background: user?.profile_photo_url
+                      ? 'var(--surface-2)'
+                      : 'linear-gradient(135deg, var(--primary) 0%, var(--primary-lt) 100%)',
+                  }}>
+                  {user?.profile_photo_url
+                    ? <img src={user.profile_photo_url} alt={user.first_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    : <span>{user?.first_name?.[0]}</span>}
                 </div>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handlePhotoUpload}
+                />
+                <button
+                  className="profile-photo-upload-btn"
+                  onClick={() => fileInput.current?.click()}
+                  disabled={uploading}
+                  title="Change photo">
+                  {uploading ? '…' : '📷'}
+                </button>
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <h2 style={{ marginBottom: '.2rem' }}>
+                  {user?.first_name}{age ? `, ${age}` : ''}
+                </h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '.9rem', marginBottom: '.65rem' }}>
+                  {[user?.city, user?.life_stage].filter(Boolean).join(' · ') || 'Location not set'}
+                </p>
+                {(user?.badges || []).length > 0 && (
+                  <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginBottom: '.85rem' }}>
+                    {user.badges.map((b) => <Badge key={b.badge_type} type={b.badge_type} />)}
+                  </div>
+                )}
                 <div className="profile-stats">
                   <div className="stat-block">
-                    <div className="stat-value">{user?.visibility_score}</div>
+                    <div className="stat-value">{user?.visibility_score ?? '—'}</div>
                     <div className="stat-label">Visibility</div>
                   </div>
                   <div className="stat-block">
-                    <div className="stat-value">{user?.response_rate}%</div>
+                    <div className="stat-value">{user?.response_rate ?? '—'}%</div>
                     <div className="stat-label">Response rate</div>
                   </div>
                   <div className="stat-block">
-                    <div className="stat-value">{user?.login_streak}</div>
+                    <div className="stat-value">{user?.login_streak ?? 0}</div>
                     <div className="stat-label">Day streak</div>
                   </div>
                 </div>
@@ -115,12 +194,9 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Edit form ── */}
-          <div className="card">
-            {error   && <div className="alert alert-error">{error}</div>}
-            {success && <div className="alert alert-success">{success}</div>}
-
+          <div className="card" style={{ marginBottom: '1.25rem' }}>
             <form onSubmit={handleSave}>
-              <h3 style={{ marginBottom: '1.25rem' }}>Basic info</h3>
+              <h3 style={{ marginBottom: '1.25rem' }}>Basic information</h3>
               <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">First name</label>
@@ -142,20 +218,24 @@ export default function ProfilePage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Bio</label>
-                <textarea className="form-textarea" rows={4} value={form.bio} onChange={set('bio')}
-                  placeholder="Share a bit about who you are and what you're looking for…" />
+                <textarea
+                  className="form-textarea"
+                  rows={4}
+                  value={form.bio}
+                  onChange={set('bio')}
+                  placeholder="Share a bit about who you are and what you're looking for…"
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Interests</label>
-                <input className="form-input" value={interests} onChange={(e) => setInterests(e.target.value)}
-                  placeholder="Hiking, cooking, jazz, travel…" />
+                <input
+                  className="form-input"
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  placeholder="Hiking, cooking, jazz, travel, yoga…"
+                />
                 <span className="form-hint">Comma-separated · up to 10</span>
               </div>
-              <div className="form-group">
-                <label className="form-label">Location</label>
-                <input className="form-input" placeholder="Full location (optional)" value={form.location} onChange={set('location')} />
-              </div>
-
               <hr className="divider" />
               <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? 'Saving…' : 'Save changes'}
@@ -164,12 +244,12 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Visibility info ── */}
-          <div className="card" style={{ marginTop: '1.25rem', background: 'var(--surface-2)', boxShadow: 'none' }}>
+          <div className="card-flat" style={{ borderRadius: 'var(--radius-lg)' }}>
             <h4 style={{ marginBottom: '.5rem' }}>How visibility works</h4>
-            <p style={{ fontSize: '.9rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              Your visibility score (0–100) determines how often you appear in others' daily profiles.
-              Consistent communication raises your score. Ghosting a match for over 72 hours reduces it by 5 points.
-              Users with a response rate above 90% receive a small boost each week.
+            <p style={{ fontSize: '.88rem', color: 'var(--text-muted)', lineHeight: 1.65 }}>
+              Your visibility score (0–100) determines how often you appear in others&apos; daily profiles.
+              Consistent communication raises your score; ghosting a match for over 72 hours reduces it by 5 points.
+              Users with a response rate above 90% receive a weekly boost.
             </p>
           </div>
         </div>

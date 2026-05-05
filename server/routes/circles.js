@@ -1,142 +1,136 @@
-const express = require('express');
-const db = require('../db');
+const express        = require('express');
+const supabase       = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/circles — list all circles
+// ── GET /api/circles ──────────────────────────────────────────
 router.get('/', authMiddleware, async (req, res) => {
-  try {
-    const { rows } = await db.query(
-      `SELECT c.id, c.name, c.description, c.category, c.member_count, c.created_at,
-              EXISTS(
-                SELECT 1 FROM circle_members cm WHERE cm.circle_id = c.id AND cm.user_id = $1
-              ) AS is_member
-       FROM circles c
-       WHERE c.is_active = true
-       ORDER BY c.member_count DESC`,
-      [req.user.id]
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch circles' });
-  }
+  const { data: circles, error } = await supabase
+    .from('circles')
+    .select('id, name, description, category, member_count, created_at')
+    .eq('is_active', true)
+    .order('member_count', { ascending: false });
+
+  if (error) return res.status(500).json({ error: 'Failed to fetch circles' });
+
+  // Determine membership for each circle
+  const { data: memberships } = await supabase
+    .from('circle_members')
+    .select('circle_id')
+    .eq('user_id', req.user.id);
+
+  const memberSet = new Set((memberships || []).map((m) => m.circle_id));
+
+  res.json(circles.map((c) => ({ ...c, is_member: memberSet.has(c.id) })));
 });
 
-// POST /api/circles — create a new circle
+// ── POST /api/circles ─────────────────────────────────────────
 router.post('/', authMiddleware, async (req, res) => {
-  try {
-    const { name, description, category } = req.body;
-    if (!name) return res.status(400).json({ error: 'Circle name is required' });
+  const { name, description, category } = req.body;
+  if (!name) return res.status(400).json({ error: 'Circle name is required' });
 
-    const { rows } = await db.query(
-      `INSERT INTO circles (name, description, category, creator_id)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [name, description || null, category || null, req.user.id]
-    );
+  const { data: circle, error } = await supabase
+    .from('circles')
+    .insert({ name, description: description || null, category: category || null, creator_id: req.user.id })
+    .select()
+    .single();
 
-    const circle = rows[0];
+  if (error) return res.status(500).json({ error: 'Failed to create circle' });
 
-    // Creator auto-joins as moderator
-    await db.query(
-      `INSERT INTO circle_members (circle_id, user_id, role) VALUES ($1, $2, 'moderator')`,
-      [circle.id, req.user.id]
-    );
-    await db.query(
-      'UPDATE circles SET member_count = member_count + 1 WHERE id = $1',
-      [circle.id]
-    );
+  // Auto-join creator as moderator
+  await supabase.from('circle_members').insert({ circle_id: circle.id, user_id: req.user.id, role: 'moderator' });
+  await supabase.from('circles').update({ member_count: 1 }).eq('id', circle.id);
 
-    res.status(201).json(circle);
-  } catch (err) {
-    console.error('Create circle error:', err);
-    res.status(500).json({ error: 'Failed to create circle' });
-  }
+  res.status(201).json(circle);
 });
 
-// POST /api/circles/:id/join
+// ── POST /api/circles/:id/join ────────────────────────────────
 router.post('/:id/join', authMiddleware, async (req, res) => {
-  try {
-    await db.query(
-      `INSERT INTO circle_members (circle_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [req.params.id, req.user.id]
-    );
-    await db.query(
-      'UPDATE circles SET member_count = member_count + 1 WHERE id = $1',
-      [req.params.id]
-    );
-    res.json({ message: 'Joined circle' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to join circle' });
-  }
+  const { error } = await supabase
+    .from('circle_members')
+    .upsert({ circle_id: req.params.id, user_id: req.user.id }, { onConflict: 'circle_id,user_id', ignoreDuplicates: true });
+
+  if (error) return res.status(500).json({ error: 'Failed to join circle' });
+
+  // Recalculate member_count accurately
+  const { count } = await supabase
+    .from('circle_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('circle_id', req.params.id);
+
+  await supabase.from('circles').update({ member_count: count || 0 }).eq('id', req.params.id);
+  res.json({ message: 'Joined circle' });
 });
 
-// POST /api/circles/:id/leave
+// ── POST /api/circles/:id/leave ───────────────────────────────
 router.post('/:id/leave', authMiddleware, async (req, res) => {
-  try {
-    const result = await db.query(
-      'DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
-    );
-    if (result.rowCount > 0) {
-      await db.query(
-        'UPDATE circles SET member_count = GREATEST(0, member_count - 1) WHERE id = $1',
-        [req.params.id]
-      );
-    }
-    res.json({ message: 'Left circle' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to leave circle' });
-  }
+  await supabase.from('circle_members').delete()
+    .eq('circle_id', req.params.id)
+    .eq('user_id', req.user.id);
+
+  const { count } = await supabase
+    .from('circle_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('circle_id', req.params.id);
+
+  await supabase.from('circles').update({ member_count: count || 0 }).eq('id', req.params.id);
+  res.json({ message: 'Left circle' });
 });
 
-// GET /api/circles/:id/messages
+// ── GET /api/circles/:id/messages ─────────────────────────────
 router.get('/:id/messages', authMiddleware, async (req, res) => {
-  try {
-    const isMember = await db.query(
-      'SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
-    );
-    if (!isMember.rows[0]) return res.status(403).json({ error: 'Join the circle to view messages' });
+  // Verify membership
+  const { data: member } = await supabase
+    .from('circle_members')
+    .select('id')
+    .eq('circle_id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
 
-    const { rows } = await db.query(
-      `SELECT cm.id, cm.content, cm.created_at,
-              u.id AS user_id, u.first_name, u.profile_photo_url
-       FROM circle_messages cm
-       JOIN users u ON u.id = cm.user_id
-       WHERE cm.circle_id = $1
-       ORDER BY cm.created_at DESC
-       LIMIT 100`,
-      [req.params.id]
-    );
+  if (!member) return res.status(403).json({ error: 'Join the circle to view messages' });
 
-    res.json(rows.reverse());
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
+  const { data, error } = await supabase
+    .from('circle_messages')
+    .select('id, content, created_at, users(id, first_name, profile_photo_url)')
+    .eq('circle_id', req.params.id)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) return res.status(500).json({ error: 'Failed to fetch messages' });
+
+  const flat = (data || []).reverse().map(({ users, ...msg }) => ({
+    ...msg,
+    user_id:           users?.id,
+    first_name:        users?.first_name,
+    profile_photo_url: users?.profile_photo_url,
+  }));
+
+  res.json(flat);
 });
 
-// POST /api/circles/:id/messages
+// ── POST /api/circles/:id/messages ────────────────────────────
 router.post('/:id/messages', authMiddleware, async (req, res) => {
-  try {
-    const { content } = req.body;
-    if (!content?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
+  const { content } = req.body;
+  if (!content?.trim()) return res.status(400).json({ error: 'Message cannot be empty' });
 
-    const isMember = await db.query(
-      'SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
-    );
-    if (!isMember.rows[0]) return res.status(403).json({ error: 'Join the circle first' });
+  const { data: member } = await supabase
+    .from('circle_members')
+    .select('id')
+    .eq('circle_id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
 
-    const { rows } = await db.query(
-      `INSERT INTO circle_messages (circle_id, user_id, content) VALUES ($1, $2, $3) RETURNING *`,
-      [req.params.id, req.user.id, content.trim()]
-    );
+  if (!member) return res.status(403).json({ error: 'Join the circle first' });
 
-    res.status(201).json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to send message' });
-  }
+  const { data, error } = await supabase
+    .from('circle_messages')
+    .insert({ circle_id: req.params.id, user_id: req.user.id, content: content.trim() })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: 'Failed to send message' });
+  res.status(201).json(data);
 });
 
 module.exports = router;

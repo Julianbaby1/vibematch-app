@@ -1,10 +1,16 @@
-const db = require('../db');
+const supabase = require('../lib/supabase');
 
 async function adminMiddleware(req, res, next) {
-  const { rows } = await db.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-  if (!rows[0]?.is_admin) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('is_admin')
+    .eq('id', req.user.id)
+    .single();
+
+  if (error || !data?.is_admin) {
     return res.status(403).json({ error: 'Admin access required' });
   }
+
   next();
 }
 
