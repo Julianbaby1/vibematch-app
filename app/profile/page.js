@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getUser, saveUser } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import Navbar from '../../components/Navbar';
 import Badge from '../../components/Badge';
 
@@ -83,18 +84,16 @@ export default function ProfilePage() {
     try {
       const fd = new FormData();
       fd.append('photo', file);
-      const result = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/users/upload/photo`, {
-        method: 'POST',
-        body: fd,
-        headers: {
-          // No Content-Type — browser sets it with boundary for multipart
-          ...(await (async () => {
-            const { supabase } = await import('../../lib/supabase');
-            const { data: { session } } = await supabase.auth.getSession();
-            return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-          })()),
-        },
-      });
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
+
+      const result = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/users/upload/photo`,
+        { method: 'POST', body: fd, headers }
+      );
       const data = await result.json();
       if (!result.ok) throw new Error(data.error || 'Upload failed');
       const updated = await api.get('/api/auth/me');

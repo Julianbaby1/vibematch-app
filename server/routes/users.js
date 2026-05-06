@@ -17,8 +17,9 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── GET /api/users/prompts/list ────────────────────────────────
+// Public endpoint — no auth required (used during registration before user has a token)
 // Placed before /:id to avoid route collision
-router.get('/prompts/list', authMiddleware, async (req, res) => {
+router.get('/prompts/list', async (req, res) => {
   const { data, error } = await supabase
     .from('prompts')
     .select('id, question, category')

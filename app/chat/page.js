@@ -214,7 +214,10 @@ function ChatContent() {
                 <div>
                   <div className="chat-header-name">{activeMatch.first_name}</div>
                   <div className="chat-header-meta">
-                    {activeMatch.city} · {activeMatch.compatibility_score}% match
+                    {[
+                      activeMatch.city,
+                      activeMatch.compatibility_score != null && `${activeMatch.compatibility_score}% match`,
+                    ].filter(Boolean).join(' · ')}
                     {onlineUsers.has(activeMatch.id) && (
                       <span style={{ color: 'var(--success)', marginLeft: '.5rem', fontSize: '.8rem' }}>● online</span>
                     )}

@@ -54,14 +54,15 @@ export default function BrowsePage() {
 
   async function handleAction(targetId, action) {
     setActionLoading(targetId);
+    const matchedProfile = daily.find((d) => d.id === targetId);
     try {
       const result = await api.post('/api/matches/action', { target_id: targetId, action });
       setDaily((prev) => prev.filter((d) => d.id !== targetId));
       if (result.matched) {
-        showToast(`🎉 It's a match! You and ${result.other_name || 'your connection'} both connected.`);
+        showToast(`🎉 It's a match! You and ${matchedProfile?.first_name || 'your connection'} both connected.`);
         await loadProfiles();
       } else if (action === 'connect') {
-        showToast('Connection request sent!');
+        showToast(`Connection request sent to ${matchedProfile?.first_name || 'them'}!`);
       }
     } catch (err) {
       showToast(err.message || 'Something went wrong', 'error');
