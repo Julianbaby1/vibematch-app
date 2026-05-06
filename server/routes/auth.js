@@ -106,6 +106,7 @@ router.post('/login', async (req, res) => {
   });
 
   if (error) {
+    console.error('[login] Supabase signIn error:', error.message, error.status);
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
@@ -171,16 +172,37 @@ router.post('/refresh', async (req, res) => {
 
 // ── GET /api/auth/me ───────────────────────────────────────────
 router.get('/me', authMiddleware, async (req, res) => {
+  // Try the rich RPC first (requires supabase/functions.sql to have been run)
   const { data, error } = await supabase.rpc('get_full_user_profile', {
     p_user_id: req.user.id,
   });
 
-  if (error || !data) {
-    console.error('Me error:', error);
-    return res.status(404).json({ error: 'User not found' });
+  if (!error && data) return res.json(data);
+
+  // RPC not found (SQL not run yet) or other DB error — fall back to basic user row
+  if (error) {
+    console.error('[/me] get_full_user_profile RPC error:', error.message, error.code);
   }
 
-  res.json(data);
+  // Fallback: return the raw users row so the frontend still works
+  const { data: basicUser, error: basicError } = await supabase
+    .from('users')
+    .select('id, email, first_name, date_of_birth, life_stage, bio, location, city, profile_photo_url, voice_intro_url, login_streak, response_rate, visibility_score, is_admin')
+    .eq('id', req.user.id)
+    .single();
+
+  if (basicError || !basicUser) {
+    console.error('[/me] Fallback user query failed:', basicError?.message);
+    return res.status(404).json({ error: 'User not found. Make sure the database schema has been applied.' });
+  }
+
+  // Return a shape the frontend can work with (empty arrays for relational fields)
+  res.json({
+    ...basicUser,
+    interests: [],
+    badges:    [],
+    prompts:   [],
+  });
 });
 
 // ── POST /api/auth/logout ──────────────────────────────────────

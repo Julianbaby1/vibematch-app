@@ -5,7 +5,9 @@
  * (postgres_changes subscriptions on the frontend).
  * Socket.io has been removed — the server is a clean REST API.
  */
-require('dotenv').config({ path: '../.env' });
+// In production (Railway/Render) env vars are injected natively — no .env file.
+// For local development, load from the project root .env if it exists.
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
 const express = require('express');
 const cors    = require('cors');
@@ -22,8 +24,18 @@ const adminRoutes  = require('./routes/admin');
 const app = express();
 
 // ─── Middleware ───────────────────────────────────────────────
+// FRONTEND_URL can be a comma-separated list for multi-origin support,
+// e.g. "https://justmytype.help,https://www.justmytype.help"
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+
 app.use(cors({
-  origin:      process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow server-to-server requests (no Origin header) and listed origins
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn(`CORS blocked origin: ${origin} — allowed: ${allowedOrigins.join(', ')}`);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -44,5 +56,9 @@ app.get('/api/health', (_, res) =>
 // ─── Start ───────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Second Wind API running on http://localhost:${PORT}`);
+  console.log(`Second Wind API running on port ${PORT}`);
+  console.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`Supabase URL configured: ${!!process.env.SUPABASE_URL}`);
+  if (!process.env.SUPABASE_URL) console.error('WARNING: SUPABASE_URL is not set!');
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) console.error('WARNING: SUPABASE_SERVICE_ROLE_KEY is not set!');
 });

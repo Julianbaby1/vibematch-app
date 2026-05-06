@@ -18,6 +18,10 @@ async function authMiddleware(req, res, next) {
   const { data: { user }, error } = await supabase.auth.getUser(token);
 
   if (error || !user) {
+    console.error('[auth] Token validation failed:', error?.message || 'no user returned', {
+      tokenPrefix: token?.slice(0, 20),
+      status: error?.status,
+    });
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
