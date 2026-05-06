@@ -1,198 +1,151 @@
-"use client";
+import Link from 'next/link';
 
-import { useMemo, useState } from "react";
-
-const PROFILES = [
-  {
-    id: 1,
-    name: "Ava",
-    age: 27,
-    distance: "2 miles away",
-    tagline: "Golden-hour chaser & latte artist.",
-    interests: ["Photography", "Hiking", "Matcha"],
-    about:
-      "Seeking someone who loves slow mornings, sunny hikes, and spontaneous concert nights.",
-    compatibility: 92,
-    photo:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: 2,
-    name: "Milo",
-    age: 30,
-    distance: "4 miles away",
-    tagline: "Chef by trade, playlist curator by night.",
-    interests: ["Cooking", "Vinyl", "City walks"],
-    about:
-      "Let’s swap favorite recipes and wander through weekend markets together.",
-    compatibility: 88,
-    photo:
-      "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: 3,
-    name: "Sienna",
-    age: 26,
-    distance: "1 mile away",
-    tagline: "Yoga flow & beach bonfire vibes.",
-    interests: ["Yoga", "Surfing", "Podcasts"],
-    about:
-      "Looking for a grounding connection that can also laugh at midnight memes.",
-    compatibility: 95,
-    photo:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: 4,
-    name: "Kai",
-    age: 29,
-    distance: "3 miles away",
-    tagline: "Product designer with a weakness for ramen.",
-    interests: ["Design", "Ramen", "Cycling"],
-    about:
-      "Optimist with big dreams. Let’s co-create adventures and new playlists.",
-    compatibility: 90,
-    photo:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
-const INITIAL_INDEX = 0;
-
-export default function Home() {
-  const [currentIndex, setCurrentIndex] = useState(INITIAL_INDEX);
-  const [likes, setLikes] = useState([]);
-  const [passes, setPasses] = useState([]);
-
-  const currentProfile = PROFILES[currentIndex];
-  const hasMoreProfiles = currentIndex < PROFILES.length;
-
-  const matches = useMemo(() => likes.map((profile) => profile.name), [likes]);
-
-  const handleLike = () => {
-    if (!currentProfile) {
-      return;
-    }
-    setLikes((prev) => [...prev, currentProfile]);
-    setCurrentIndex((prev) => prev + 1);
-  };
-
-  const handlePass = () => {
-    if (!currentProfile) {
-      return;
-    }
-    setPasses((prev) => [...prev, currentProfile]);
-    setCurrentIndex((prev) => prev + 1);
-  };
-
-  const handleRestart = () => {
-    setCurrentIndex(INITIAL_INDEX);
-    setLikes([]);
-    setPasses([]);
-  };
-
+export default function LandingPage() {
   return (
-    <div className="page">
-      <header className="hero">
-        <div>
-          <p className="pill">Now matching</p>
-          <h1>VibeMatch</h1>
-          <p className="subtitle">
-            Discover people who share your spark. Swipe with intention, chat
-            with confidence, and see who vibes back.
+    <>
+      {/* ── Hero ── */}
+      <section className="landing-hero">
+        <div style={{ width: '100%' }}>
+          <div className="landing-hero-content">
+            <p className="landing-eyebrow">✦ For Adults 39 &amp; Older</p>
+            <h1 className="landing-title">
+              Where Real<br />
+              <span className="highlight">Connections Begin</span>
+            </h1>
+            <p className="landing-sub">
+              Second Wind is a thoughtful dating platform built for people ready
+              for meaningful conversation, genuine chemistry, and a fresh start.
+              No swiping. No games. Just real people.
+            </p>
+            <div className="landing-cta">
+              <Link href="/register" className="btn btn-primary btn-xl">
+                Create your profile — free
+              </Link>
+              <Link href="/login" className="btn btn-ghost btn-lg" style={{ borderRadius: '999px' }}>
+                Sign in
+              </Link>
+            </div>
+            <div className="landing-social-proof">
+              <span className="social-proof-item">
+                <span>✓</span> <strong>39+</strong> age verified
+              </span>
+              <span className="social-proof-item">
+                <span>✓</span> <strong>Conversation-first</strong> matching
+              </span>
+              <span className="social-proof-item">
+                <span>✓</span> <strong>No ghosting</strong> policy
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features ── */}
+      <div className="landing-features">
+        <div className="feature-card">
+          <div className="feature-icon">💬</div>
+          <h3>Conversation first</h3>
+          <p>
+            Answer three personal prompts. Potential matches see who you truly
+            are before ever connecting — no profile-photo guessing games.
           </p>
         </div>
-        <div className="stats">
-          <div>
-            <span className="stat-value">{likes.length}</span>
-            <span className="stat-label">Likes</span>
+        <div className="feature-card">
+          <div className="feature-icon">🤝</div>
+          <h3>5 curated daily profiles</h3>
+          <p>
+            No endless scrolling. Each day you receive five thoughtfully
+            selected people. Connect or Pass — simple and intentional.
+          </p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon">🌿</div>
+          <h3>Accountability built in</h3>
+          <p>
+            Consistent communicators are boosted in search. Ghosting reduces
+            your visibility. We reward people who show up.
+          </p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon">🏘️</div>
+          <h3>Interest Circles</h3>
+          <p>
+            Join communities like Over-40 Travel, Single Parents, or Book
+            Lovers. Meet people naturally through shared interests.
+          </p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon">📅</div>
+          <h3>Local events</h3>
+          <p>
+            RSVP to real-world events near you. Take conversations offline at
+            meetups designed for adults ready to connect.
+          </p>
+        </div>
+        <div className="feature-card">
+          <div className="feature-icon">🔒</div>
+          <h3>Safe &amp; verified</h3>
+          <p>
+            Age-verified membership, transparent reporting, and an active
+            moderation team. Your safety is our priority.
+          </p>
+        </div>
+      </div>
+
+      {/* ── How it works ── */}
+      <div className="landing-steps">
+        <p className="landing-eyebrow" style={{ display: 'inline-flex', marginBottom: '1rem' }}>How it works</p>
+        <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 800, marginBottom: '.75rem' }}>
+          Three steps to your next great connection
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', maxWidth: 520, margin: '0 auto' }}>
+          We&apos;ve removed the noise so you can focus on what matters.
+        </p>
+        <div className="steps-grid">
+          <div className="step-card">
+            <div className="step-number">1</div>
+            <h3>Build your story</h3>
+            <p>
+              Create a profile that goes beyond photos. Answer three honest
+              prompts and let your personality lead.
+            </p>
           </div>
-          <div>
-            <span className="stat-value">{passes.length}</span>
-            <span className="stat-label">Passes</span>
+          <div className="step-card">
+            <div className="step-number">2</div>
+            <h3>Meet today&apos;s five</h3>
+            <p>
+              Each morning, five curated profiles arrive — scored by shared
+              interests, location, and conversation style.
+            </p>
           </div>
-          <div>
-            <span className="stat-value">{matches.length}</span>
-            <span className="stat-label">Matches</span>
+          <div className="step-card">
+            <div className="step-number">3</div>
+            <h3>Connect &amp; talk</h3>
+            <p>
+              When both of you connect, a real-time conversation opens.
+              No matches sitting idle — talk or the connection cools.
+            </p>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="content">
-        <section className="card">
-          {hasMoreProfiles && currentProfile ? (
-            <>
-              <div className="card-image">
-                <img
-                  src={currentProfile.photo}
-                  alt={`${currentProfile.name} profile`}
-                />
-                <div className="compatibility">
-                  {currentProfile.compatibility}% vibe match
-                </div>
-              </div>
-              <div className="card-body">
-                <div className="card-header">
-                  <div>
-                    <h2>
-                      {currentProfile.name}, {currentProfile.age}
-                    </h2>
-                    <p className="distance">{currentProfile.distance}</p>
-                  </div>
-                  <span className="tagline">{currentProfile.tagline}</span>
-                </div>
-                <p className="about">{currentProfile.about}</p>
-                <div className="chips">
-                  {currentProfile.interests.map((interest) => (
-                    <span key={interest}>{interest}</span>
-                  ))}
-                </div>
-              </div>
-              <div className="card-actions">
-                <button className="secondary" onClick={handlePass}>
-                  Pass
-                </button>
-                <button className="primary" onClick={handleLike}>
-                  Like
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="empty-state">
-              <h2>No more profiles nearby</h2>
-              <p>
-                You reached the end of today’s stack. Restart to revisit, or
-                check back later for more matches.
-              </p>
-              <button className="primary" onClick={handleRestart}>
-                Restart stack
-              </button>
-            </div>
-          )}
-        </section>
+      {/* ── CTA section ── */}
+      <div className="landing-cta-section">
+        <h2>Ready for your second wind?</h2>
+        <p>Join thousands of adults 39+ who are done settling and ready for something real.</p>
+        <Link href="/register" className="btn btn-white btn-xl">
+          Get started — it&apos;s free
+        </Link>
+      </div>
 
-        <section className="match-panel">
-          <h3>Today's matches</h3>
-          {matches.length === 0 ? (
-            <p className="muted">
-              Like a profile to start building your matches.
-            </p>
-          ) : (
-            <ul>
-              {matches.map((name) => (
-                <li key={name}>
-                  <span className="avatar">{name.slice(0, 1)}</span>
-                  <div>
-                    <p>{name}</p>
-                    <span>Send a wave 👋</span>
-                  </div>
-                  <button className="ghost">Message</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </main>
-    </div>
+      {/* ── Footer ── */}
+      <footer className="landing-footer">
+        <p>Second Wind © 2025 · For adults 39+ · Built with intention</p>
+        <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '.75rem', flexWrap: 'wrap' }}>
+          <Link href="/login" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Sign in</Link>
+          <Link href="/register" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Create account</Link>
+        </div>
+      </footer>
+    </>
   );
 }
