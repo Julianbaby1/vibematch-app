@@ -8,11 +8,13 @@ import { api, saveUser } from '../../lib/api';
 
 const LIFE_STAGES = ['Single', 'Divorced', 'Widowed', 'Separated', 'Other'];
 const STEPS       = ['Account', 'About you', 'Your story'];
+const API_BASE    = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep]       = useState(0);
   const [prompts, setPrompts] = useState([]);
+  const [promptsFailed, setPromptsFailed] = useState(false);
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,13 +26,33 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    // Prompts endpoint is public — no auth needed yet
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/users/prompts/list`, {
+    // Surface the most common deployment mistake directly in the UI:
+    // a production build still pointing at localhost cannot reach the API.
+    if (API_BASE.includes('localhost') && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+      console.error('[register] NEXT_PUBLIC_API_URL is not set — API calls will fail. API base:', API_BASE);
+      setError(
+        'This deployment is misconfigured: NEXT_PUBLIC_API_URL is not set, so the app cannot reach its server. ' +
+        'Site owner: add it in the Vercel dashboard and redeploy.'
+      );
+    }
+
+    // Prompts endpoint is public — no auth needed yet.
+    // Failure here is never fatal: signup works without prompts.
+    fetch(`${API_BASE}/api/users/prompts/list`, {
       headers: { Authorization: 'Bearer public' },
     })
-      .then((r) => r.json())
-      .then((data) => setPrompts(Array.isArray(data) ? data.slice(0, 3) : []))
-      .catch(() => {});
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setPrompts(data.slice(0, 3));
+        else setPromptsFailed(true);
+      })
+      .catch((err) => {
+        console.error(`[register] Failed to load prompts from ${API_BASE}/api/users/prompts/list:`, err);
+        setPromptsFailed(true);
+      });
   }, []);
 
   const set = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
@@ -49,21 +71,38 @@ export default function RegisterPage() {
     return form.prompt_responses.find((r) => r.prompt_id === promptId)?.response || '';
   }
 
+  function isNetworkError(err) {
+    return err instanceof TypeError
+      || /load failed|failed to fetch|network/i.test(err?.message || '');
+  }
+
   async function handleSubmit() {
     setError('');
     setLoading(true);
 
     try {
-      // 1. Express validates age + creates Supabase Auth user + profile row
-      await api.post('/api/auth/register', {
-        email:         form.email,
-        password:      form.password,
-        first_name:    form.first_name,
-        date_of_birth: form.date_of_birth,
-        life_stage:    form.life_stage || undefined,
-        bio:           form.bio        || undefined,
-        city:          form.city       || undefined,
-      });
+      // 1. Express validates age + creates Supabase Auth user + profile row.
+      //    This is the only step that may block signup.
+      try {
+        await api.post('/api/auth/register', {
+          email:         form.email,
+          password:      form.password,
+          first_name:    form.first_name,
+          date_of_birth: form.date_of_birth,
+          life_stage:    form.life_stage || undefined,
+          bio:           form.bio        || undefined,
+          city:          form.city       || undefined,
+        });
+      } catch (err) {
+        console.error('[register] POST /api/auth/register failed:', err, '— API base:', API_BASE);
+        if (isNetworkError(err)) {
+          throw new Error(
+            'We couldn’t reach the server, so your account wasn’t created. Please try again in a moment. ' +
+            '(Site owner: check that the API server is deployed and NEXT_PUBLIC_API_URL points to it.)'
+          );
+        }
+        throw err;
+      }
 
       // 2. Sign in via Supabase Auth (gets the session/access_token)
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -72,16 +111,26 @@ export default function RegisterPage() {
       });
       if (signInError) throw new Error(signInError.message);
 
-      // 3. Save interests + prompt responses (now authenticated)
-      const interests = form.interests.split(',').map((i) => i.trim()).filter(Boolean);
-      await api.put('/api/users/profile', {
-        interests,
-        prompt_responses: form.prompt_responses,
-      });
+      // 3. Save interests + prompt responses — best-effort, never blocks
+      //    signup (these can be added later from the profile page)
+      try {
+        const interests = form.interests.split(',').map((i) => i.trim()).filter(Boolean);
+        await api.put('/api/users/profile', {
+          interests,
+          prompt_responses: form.prompt_responses,
+        });
+      } catch (err) {
+        console.error('[register] Saving interests/prompts failed (non-fatal):', err);
+      }
 
-      // 4. Fetch and cache full profile
-      const user = await api.get('/api/auth/me');
-      saveUser(user);
+      // 4. Fetch and cache full profile — also best-effort; the dashboard
+      //    re-fetches it on load
+      try {
+        const user = await api.get('/api/auth/me');
+        saveUser(user);
+      } catch (err) {
+        console.error('[register] GET /api/auth/me failed (non-fatal):', err);
+      }
 
       router.push('/dashboard');
     } catch (err) {
@@ -184,7 +233,10 @@ export default function RegisterPage() {
             </p>
             {prompts.length === 0 && (
               <div className="alert alert-info">
-                <span>ℹ️</span> Prompts are loading… you can skip this step if they don&apos;t appear.
+                <span>ℹ️</span>{' '}
+                {promptsFailed
+                  ? 'We couldn’t load the profile questions right now — no problem. Finish creating your account and you can answer them later from your profile.'
+                  : 'Loading questions…'}
               </div>
             )}
             {prompts.map((p, i) => (
