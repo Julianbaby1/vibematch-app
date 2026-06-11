@@ -6,8 +6,12 @@
 --  The app owner's email is granted the admin role automatically.
 --  No passwords are stored here — the owner signs up through the
 --  normal Supabase Auth flow (signup / login / password reset).
---  Keep the email list in sync with ADMIN_EMAILS on the Express
---  server (server/config/admin.js).
+--
+--  NOTE: this DB-level guarantee covers ONLY the email(s) hardcoded
+--  in is_owner_email() below. The Express server reads ADMIN_EMAILS
+--  (server/config/admin.js) at signup/login; if you add emails via
+--  that env var, add them here too and re-run this script, otherwise
+--  they are admin via the app flow but have no DB-level backstop.
 -- =============================================================
 
 -- ─── Owner email check ────────────────────────────────────────

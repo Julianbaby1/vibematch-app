@@ -5,6 +5,10 @@
  * registration (and promoted at login if the account already exists).
  *
  * Override with a comma-separated ADMIN_EMAILS env var if needed.
+ * If you add emails here, also add them to is_owner_email() in
+ * supabase/admin_role.sql and re-run it — the DB trigger backstop
+ * only covers emails hardcoded there.
+ *
  * No passwords live here — admin accounts authenticate through the
  * normal Supabase Auth signup / login / password-reset flow.
  */

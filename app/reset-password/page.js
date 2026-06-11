@@ -10,19 +10,30 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [ready, setReady]       = useState(false);
+  const [expired, setExpired]   = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
   useEffect(() => {
     // The reset email link signs the user into a recovery session;
     // the Supabase client picks it up from the URL automatically.
+    let timer;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
+      if (session) {
+        setReady(true);
+      } else {
+        // Give the client a few seconds to exchange the recovery code from
+        // the URL before declaring the link invalid/expired
+        timer = setTimeout(() => setExpired(true), 4000);
+      }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setReady(true);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   async function handleSubmit(e) {
@@ -66,10 +77,14 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        {!ready ? (
+        {!ready && expired ? (
           <p style={{ color: 'var(--text-muted)' }}>
-            Verifying your reset link… If this takes more than a few seconds, the link may have
-            expired — <Link href="/forgot-password">request a new one</Link>.
+            This reset link is invalid or has expired —{' '}
+            <Link href="/forgot-password">request a new one</Link>.
+          </p>
+        ) : !ready ? (
+          <p style={{ color: 'var(--text-muted)' }}>
+            Verifying your reset link…
           </p>
         ) : (
           <form onSubmit={handleSubmit}>

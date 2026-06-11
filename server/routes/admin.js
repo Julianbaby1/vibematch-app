@@ -2,6 +2,7 @@ const express        = require('express');
 const supabase       = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
+const { isAdminEmail } = require('../config/admin');
 
 const router = express.Router();
 
@@ -110,11 +111,12 @@ router.post('/ban/:userId', async (req, res) => {
 
   const { data: target } = await supabase
     .from('users')
-    .select('is_admin')
+    .select('is_admin, email')
     .eq('id', req.params.userId)
     .single();
 
-  if (target?.is_admin) {
+  // Check the configured admin emails too, in case the DB flag is ever wrong
+  if (target?.is_admin || isAdminEmail(target?.email)) {
     return res.status(403).json({ error: 'Admin accounts cannot be banned' });
   }
 
