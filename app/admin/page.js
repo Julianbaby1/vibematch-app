@@ -59,13 +59,14 @@ export default function AdminPage() {
     try {
       await api.post(`/api/admin/${action}/${userId}`, { reason });
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, is_banned: !isBanned } : u));
-      setFlagged((prev) => prev.map((u) => u.id === userId ? { ...u, is_banned: !isBanned } : u));
-      if (isBanned) {
-        setBlocked((prev) => prev.filter((u) => u.id !== userId));
-      } else {
-        const banned = users.find((u) => u.id === userId) || flagged.find((u) => u.id === userId);
-        if (banned) setBlocked((prev) => [{ ...banned, is_banned: true }, ...prev]);
-      }
+      // Flagged and blocked are server-derived views — re-fetch rather than
+      // patching them by hand (their rows have different fields than `users`)
+      const [flaggedData, blockedData] = await Promise.all([
+        api.get('/api/admin/flagged'),
+        api.get('/api/admin/blocked'),
+      ]);
+      setFlagged(flaggedData);
+      setBlocked(blockedData);
     } catch (err) {
       alert(err.message);
     }

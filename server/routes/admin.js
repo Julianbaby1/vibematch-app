@@ -67,7 +67,8 @@ router.get('/blocked', async (req, res) => {
     .from('users')
     .select('id, email, first_name, city, created_at, last_login_at')
     .eq('is_banned', true)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (error) return res.status(500).json({ error: 'Failed to fetch blocked users' });
   res.json(data || []);
@@ -79,7 +80,9 @@ router.get('/flagged', async (req, res) => {
   const { data: reports, error } = await supabase
     .from('reports')
     .select('reason, created_at, reported:reported_user_id(id, email, first_name, city, is_banned)')
-    .eq('status', 'pending');
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(500);
 
   if (error) return res.status(500).json({ error: 'Failed to fetch flagged accounts' });
 
