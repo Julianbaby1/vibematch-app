@@ -12,6 +12,7 @@
 const express       = require('express');
 const supabase      = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
+const { isAdminEmail } = require('../config/admin');
 
 const router = express.Router();
 
@@ -48,6 +49,9 @@ router.post('/register', async (req, res) => {
 
   const authUserId = authData.user.id;
 
+  // The owner email is automatically granted the admin role
+  const isAdmin = isAdminEmail(email);
+
   // 2. Create the public profile row with the same UUID
   const { error: profileError } = await supabase.from('users').insert({
     id:            authUserId,
@@ -58,6 +62,7 @@ router.post('/register', async (req, res) => {
     bio:           bio || null,
     location:      location || null,
     city:          city || null,
+    is_admin:      isAdmin,
   });
 
   if (profileError) {
@@ -87,7 +92,7 @@ router.post('/register', async (req, res) => {
       first_name,
       date_of_birth,
       life_stage,
-      is_admin: false,
+      is_admin: isAdmin,
     },
   });
 });
@@ -115,13 +120,17 @@ router.post('/login', async (req, res) => {
   // 2. Check ban status
   const { data: profile } = await supabase
     .from('users')
-    .select('is_banned, login_streak, last_login_at')
+    .select('is_banned, is_admin, login_streak, last_login_at')
     .eq('id', userId)
     .single();
 
   if (profile?.is_banned) {
     return res.status(403).json({ error: 'Account suspended' });
   }
+
+  // The owner email is always an admin — promote on login if the
+  // account predates the admin role system
+  const promoteToAdmin = !profile?.is_admin && isAdminEmail(sessionData.user.email);
 
   // 3. Update login streak
   const today     = new Date().toDateString();
@@ -134,6 +143,7 @@ router.post('/login', async (req, res) => {
   await supabase.from('users').update({
     last_login_at: new Date().toISOString(),
     login_streak: newStreak,
+    ...(promoteToAdmin ? { is_admin: true } : {}),
   }).eq('id', userId);
 
   // 4. Award streak badges
@@ -152,6 +162,7 @@ router.post('/login', async (req, res) => {
     user: {
       ...sessionData.user,
       login_streak: newStreak,
+      is_admin: !!profile?.is_admin || promoteToAdmin,
     },
   });
 });

@@ -2,6 +2,7 @@ const express        = require('express');
 const supabase       = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
 const adminMiddleware = require('../middleware/admin');
+const { isAdminEmail } = require('../config/admin');
 
 const router = express.Router();
 
@@ -61,9 +62,63 @@ router.get('/users', async (req, res) => {
   res.json(data || []);
 });
 
+// ── GET /api/admin/blocked ────────────────────────────────────
+router.get('/blocked', async (req, res) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, first_name, city, created_at, last_login_at')
+    .eq('is_banned', true)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) return res.status(500).json({ error: 'Failed to fetch blocked users' });
+  res.json(data || []);
+});
+
+// ── GET /api/admin/flagged ────────────────────────────────────
+// Accounts with at least one pending report, ordered by report count
+router.get('/flagged', async (req, res) => {
+  const { data: reports, error } = await supabase
+    .from('reports')
+    .select('reason, created_at, reported:reported_user_id(id, email, first_name, city, is_banned)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) return res.status(500).json({ error: 'Failed to fetch flagged accounts' });
+
+  const byUser = new Map();
+  for (const r of reports || []) {
+    if (!r.reported) continue;
+    const entry = byUser.get(r.reported.id) || {
+      ...r.reported,
+      pending_reports:  0,
+      reasons:          [],
+      last_reported_at: r.created_at,
+    };
+    entry.pending_reports += 1;
+    if (r.reason && !entry.reasons.includes(r.reason)) entry.reasons.push(r.reason);
+    if (r.created_at > entry.last_reported_at) entry.last_reported_at = r.created_at;
+    byUser.set(r.reported.id, entry);
+  }
+
+  res.json([...byUser.values()].sort((a, b) => b.pending_reports - a.pending_reports));
+});
+
 // ── POST /api/admin/ban/:userId ───────────────────────────────
 router.post('/ban/:userId', async (req, res) => {
   const { reason } = req.body;
+
+  const { data: target } = await supabase
+    .from('users')
+    .select('is_admin, email')
+    .eq('id', req.params.userId)
+    .single();
+
+  // Check the configured admin emails too, in case the DB flag is ever wrong
+  if (target?.is_admin || isAdminEmail(target?.email)) {
+    return res.status(403).json({ error: 'Admin accounts cannot be banned' });
+  }
 
   await supabase.from('users').update({ is_banned: true, is_active: false }).eq('id', req.params.userId);
 

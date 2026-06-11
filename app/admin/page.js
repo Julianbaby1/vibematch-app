@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, getUser } from '../../lib/api';
+import { api, getUser, saveUser } from '../../lib/api';
 import Navbar from '../../components/Navbar';
 
 export default function AdminPage() {
@@ -11,6 +11,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
+  const [flagged, setFlagged] = useState([]);
+  const [blocked, setBlocked] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -18,21 +20,32 @@ export default function AdminPage() {
   useEffect(() => {
     const cached = getUser();
     if (!cached) { router.replace('/login'); return; }
-    if (!cached.is_admin) { router.replace('/dashboard'); return; }
-    setUser(cached);
-    loadData();
+    // Verify the role server-side — the cached profile may be stale.
+    // The admin API itself also re-checks is_admin on every request.
+    api.get('/api/auth/me')
+      .then((me) => {
+        saveUser(me);
+        if (!me.is_admin) { router.replace('/dashboard'); return; }
+        setUser(me);
+        loadData();
+      })
+      .catch(() => router.replace('/login'));
   }, []);
 
   async function loadData() {
     try {
-      const [statsData, usersData, reportsData] = await Promise.all([
+      const [statsData, usersData, reportsData, flaggedData, blockedData] = await Promise.all([
         api.get('/api/admin/stats'),
         api.get('/api/admin/users'),
         api.get('/api/admin/reports'),
+        api.get('/api/admin/flagged'),
+        api.get('/api/admin/blocked'),
       ]);
       setStats(statsData);
       setUsers(usersData);
       setReports(reportsData);
+      setFlagged(flaggedData);
+      setBlocked(blockedData);
     } catch {
       router.replace('/dashboard');
     } finally {
@@ -46,6 +59,14 @@ export default function AdminPage() {
     try {
       await api.post(`/api/admin/${action}/${userId}`, { reason });
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, is_banned: !isBanned } : u));
+      // Flagged and blocked are server-derived views — re-fetch rather than
+      // patching them by hand (their rows have different fields than `users`)
+      const [flaggedData, blockedData] = await Promise.all([
+        api.get('/api/admin/flagged'),
+        api.get('/api/admin/blocked'),
+      ]);
+      setFlagged(flaggedData);
+      setBlocked(blockedData);
     } catch (err) {
       alert(err.message);
     }
@@ -104,7 +125,7 @@ export default function AdminPage() {
 
           {/* Tabs */}
           <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '.5rem' }}>
-            {['overview', 'users', 'reports'].map((tab) => (
+            {['overview', 'users', 'reports', 'flagged', 'blocked'].map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`btn btn-sm ${activeTab === tab ? 'btn-primary' : 'btn-ghost'}`}
                 style={{ textTransform: 'capitalize' }}>
@@ -208,6 +229,103 @@ export default function AdminPage() {
                               <button className="btn btn-sm btn-primary"  onClick={() => handleReportStatus(r.id, 'resolved')}>Resolve</button>
                             </div>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Flagged accounts table */}
+          {activeTab === 'flagged' && (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Pending reports</th>
+                      <th>Reasons</th>
+                      <th>Last reported</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flagged.length === 0 && (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                        No flagged accounts — nothing pending review.
+                      </td></tr>
+                    )}
+                    {flagged.map((u) => (
+                      <tr key={u.id}>
+                        <td style={{ fontWeight: 600 }}>{u.first_name}</td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '.85rem' }}>{u.email}</td>
+                        <td><span className="badge badge-amber">{u.pending_reports}</span></td>
+                        <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '.85rem' }}>
+                          {u.reasons?.join(', ') || '—'}
+                        </td>
+                        <td style={{ fontSize: '.83rem', color: 'var(--text-muted)' }}>
+                          {u.last_reported_at ? new Date(u.last_reported_at).toLocaleDateString() : '—'}
+                        </td>
+                        <td>
+                          {u.is_banned
+                            ? <span className="badge badge-purple">Banned</span>
+                            : <span className="badge badge-green">Active</span>}
+                        </td>
+                        <td>
+                          <button className={`btn btn-sm ${u.is_banned ? 'btn-outline' : 'btn-danger'}`}
+                            onClick={() => handleBan(u.id, u.is_banned)}>
+                            {u.is_banned ? 'Unban' : 'Ban'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Blocked users table */}
+          {activeTab === 'blocked' && (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>City</th>
+                      <th>Joined</th>
+                      <th>Last login</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {blocked.length === 0 && (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                        No blocked users.
+                      </td></tr>
+                    )}
+                    {blocked.map((u) => (
+                      <tr key={u.id}>
+                        <td style={{ fontWeight: 600 }}>{u.first_name}</td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '.85rem' }}>{u.email}</td>
+                        <td>{u.city || '—'}</td>
+                        <td style={{ fontSize: '.83rem', color: 'var(--text-muted)' }}>
+                          {new Date(u.created_at).toLocaleDateString()}
+                        </td>
+                        <td style={{ fontSize: '.83rem', color: 'var(--text-muted)' }}>
+                          {u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}
+                        </td>
+                        <td>
+                          <button className="btn btn-sm btn-outline" onClick={() => handleBan(u.id, true)}>
+                            Unban
+                          </button>
                         </td>
                       </tr>
                     ))}
