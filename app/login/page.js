@@ -53,7 +53,8 @@ export default function LoginPage() {
         // If the API call fails but Supabase auth worked, give a specific error
         if (apiErr.message?.includes('fetch') || apiErr.message?.includes('network') || apiErr.message?.includes('CORS')) {
           throw new Error(
-            'Could not reach the API server. Make sure NEXT_PUBLIC_API_URL is set correctly in your hosting dashboard.'
+            'Could not reach the server. Please try again in a moment. ' +
+            '(Site owner: check the Vercel function logs and that SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.)'
           );
         }
         if (apiErr.message?.includes('User not found') || apiErr.message?.includes('database schema')) {
