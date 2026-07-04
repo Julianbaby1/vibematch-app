@@ -1,15 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Proxy all /api/* requests to the Express server in development
-  async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    return [
-      {
-        source:      '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
-      },
-    ];
-  },
+  // The Express API is served by this same Next.js app via
+  // pages/api/[[...path]].js — no proxy rewrite needed.
 
   images: {
     remotePatterns: [

@@ -8,7 +8,8 @@ import { api, saveUser } from '../../lib/api';
 
 const LIFE_STAGES = ['Single', 'Divorced', 'Widowed', 'Separated', 'Other'];
 const STEPS       = ['Account', 'About you', 'Your story'];
-const API_BASE    = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Same-origin by default — the API is served by this Next.js app
+const API_BASE    = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,16 +27,6 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    // Surface the most common deployment mistake directly in the UI:
-    // a production build still pointing at localhost cannot reach the API.
-    if (API_BASE.includes('localhost') && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-      console.error('[register] NEXT_PUBLIC_API_URL is not set — API calls will fail. API base:', API_BASE);
-      setError(
-        'This deployment is misconfigured: NEXT_PUBLIC_API_URL is not set, so the app cannot reach its server. ' +
-        'Site owner: add it in the Vercel dashboard and redeploy.'
-      );
-    }
-
     // Prompts endpoint is public — no auth needed yet.
     // Failure here is never fatal: signup works without prompts.
     fetch(`${API_BASE}/api/users/prompts/list`, {
@@ -98,7 +89,7 @@ export default function RegisterPage() {
         if (isNetworkError(err)) {
           throw new Error(
             'We couldn’t reach the server, so your account wasn’t created. Please try again in a moment. ' +
-            '(Site owner: check that the API server is deployed and NEXT_PUBLIC_API_URL points to it.)'
+            '(Site owner: check the Vercel function logs and that SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.)'
           );
         }
         throw err;
