@@ -54,10 +54,18 @@ function ChatContent() {
 
   // ── Open conversation when matchId changes ───────────────────
   useEffect(() => {
-    if (matchId && matches.length > 0) {
-      const m = matches.find((x) => x.match_id === matchId);
-      if (m) loadConversation(m);
+    if (matches.length === 0) return;
+
+    if (matchId) {
+      const m = matches.find((x) => String(x.match_id) === String(matchId));
+      if (m) {
+        loadConversation(m);
+        return;
+      }
     }
+
+    // Fallback: auto-open the first match so chat is usable from /chat
+    loadConversation(matches[0]);
   }, [matchId, matches]);
 
   // ── Scroll to bottom on new messages ────────────────────────
