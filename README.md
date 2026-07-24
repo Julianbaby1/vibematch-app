@@ -1,16 +1,16 @@
-# Second Wind
+# VibeMatch
 
-> A thoughtful dating and social networking platform for adults 39 and older.  
+> A thoughtful dating and social networking platform for adults 35 and older.  
 > Built with Next.js · Express · PostgreSQL · Socket.io
 
 ---
 
-## What is Second Wind?
+## What is VibeMatch?
 
-Second Wind prioritizes meaningful conversations over swipe-based behavior. Users answer three personal prompts before matching, get five curated daily profiles, and build accountability through a transparent response-rate system.
+VibeMatch — dating that matches your real life, not just your photos — prioritizes meaningful conversations over swipe-based behavior. Users answer three personal prompts before matching, get five curated daily profiles, and build accountability through a transparent response-rate system.
 
 **Key features:**
-- Age-verified registration (39+)
+- Age-verified registration (35+)
 - Conversation-first matching via prompt responses
 - Daily limit of 5 profile suggestions (no swipe mechanic)
 - Real-time chat with Socket.io + voice note support hooks
@@ -38,7 +38,7 @@ Second Wind prioritizes meaningful conversations over swipe-based behavior. User
 ## Project Structure
 
 ```
-second-wind/
+vibematch-app/
 ├── app/                    # Next.js App Router pages
 │   ├── page.js             # Landing page
 │   ├── login/page.js       # Sign in
@@ -102,7 +102,7 @@ second-wind/
 
 ```bash
 git clone <repo-url>
-cd second-wind
+cd vibematch-app
 
 # Install frontend deps
 npm install
@@ -162,7 +162,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Auth
 | Method | Path                | Auth | Description          |
 |--------|---------------------|------|----------------------|
-| POST   | /api/auth/register  | ✗    | Register (39+)       |
+| POST   | /api/auth/register  | ✗    | Register (35+)       |
 | POST   | /api/auth/login     | ✗    | Login → JWT token    |
 | GET    | /api/auth/me        | ✓    | Current user profile |
 
@@ -281,7 +281,7 @@ The CSS is entirely in `app/globals.css` using CSS custom properties. Key tokens
 | `--text`        | `#1A1A1A`   | Body text              |
 | `--text-muted`  | `#6B6B6B`   | Secondary text         |
 
-Base font size is **17px** (bumped from 16 for readability for 39+ users).
+Base font size is **17px** (bumped from 16 for readability for 35+ users).
 
 ---
 

@@ -1,5 +1,5 @@
 -- =============================================================
---  Second Wind — Supabase Schema
+--  VibeMatch — Supabase Schema
 --  Run this in the Supabase SQL editor (Project → SQL Editor)
 --  Extensions, tables, RLS, policies, indexes.
 -- =============================================================
@@ -415,3 +415,71 @@ CREATE POLICY "reports_select_own" ON public.reports
 -- ─── user_badges ──────────────────────────────────────────────
 CREATE POLICY "badges_select_authenticated" ON public.user_badges
   FOR SELECT TO authenticated USING (true);
+
+-- ─── Age gate (VibeMatch is exclusively 35+) ─────────────────────
+-- Kept in sync with supabase/migrations/20260723100000_enforce_min_age_35.sql
+ALTER TABLE public.users ALTER COLUMN date_of_birth SET NOT NULL;
+ALTER TABLE public.users ADD CONSTRAINT users_min_age_35_check
+  CHECK (date_of_birth <= (current_date - interval '35 years'));
+
+-- =============================================================
+--  VIBECHECK COMPATIBILITY QUESTIONNAIRE
+-- =============================================================
+
+-- ─── Questions (seeded via seed.sql) ──────────────────────────
+CREATE TABLE IF NOT EXISTS public.compatibility_questions (
+  id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  category      TEXT NOT NULL,
+  question      TEXT NOT NULL,
+  options       JSONB NOT NULL,               -- array of option strings
+  is_scale      BOOLEAN NOT NULL DEFAULT FALSE, -- close answers earn partial credit
+  display_order INTEGER NOT NULL,
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── Answers (one row per user per question) ──────────────────
+-- importance weights the score: a_little=1, somewhat=10, very=50, dealbreaker=250
+CREATE TABLE IF NOT EXISTS public.user_compatibility_answers (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  question_id  INTEGER NOT NULL REFERENCES public.compatibility_questions(id) ON DELETE CASCADE,
+  answer_index INTEGER NOT NULL,
+  importance   TEXT NOT NULL DEFAULT 'somewhat'
+    CHECK (importance IN ('a_little','somewhat','very','dealbreaker')),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, question_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_uca_question_id ON public.user_compatibility_answers (question_id);
+
+ALTER TABLE public.compatibility_questions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_compatibility_answers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Active questions are readable by authenticated users"
+  ON public.compatibility_questions FOR SELECT TO authenticated USING (is_active = TRUE);
+
+CREATE POLICY "Users can read own answers"
+  ON public.user_compatibility_answers FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own answers"
+  ON public.user_compatibility_answers FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own answers"
+  ON public.user_compatibility_answers FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own answers"
+  ON public.user_compatibility_answers FOR DELETE TO authenticated USING (auth.uid() = user_id);
+
+-- keep updated_at fresh on answer edits
+CREATE OR REPLACE FUNCTION public.set_uca_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_uca_updated_at ON public.user_compatibility_answers;
+CREATE TRIGGER trg_uca_updated_at
+  BEFORE UPDATE ON public.user_compatibility_answers
+  FOR EACH ROW EXECUTE FUNCTION public.set_uca_updated_at();

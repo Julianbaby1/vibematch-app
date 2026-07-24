@@ -43,7 +43,7 @@ export default function Navbar({ user }) {
           {/* Logo */}
           <Link href={user ? '/dashboard' : '/'} className="navbar-logo">
             <span className="navbar-logo-mark">✦</span>
-            Second Wind
+            VibeMatch
           </Link>
 
           {/* Nav links — logged in only */}

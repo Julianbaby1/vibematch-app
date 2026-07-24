@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '1.25rem' }}>
           <span style={{ fontSize: '1.3rem' }}>✦</span>
-          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Second Wind</span>
+          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>VibeMatch</span>
         </div>
         <h1 style={{ marginBottom: '.3rem' }}>Reset your password</h1>
         <p className="subtitle">Enter your email and we&apos;ll send you a reset link.</p>

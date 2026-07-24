@@ -190,7 +190,7 @@ export default function SettingsPage() {
                     ⚠️ This will permanently delete your account and all data.
                   </p>
                   <p style={{ fontSize: '.9rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                    Please contact us at support@secondwind.app to request account deletion.
+                    Please contact us at support@justmytype.help to request account deletion.
                     We&apos;ll process your request within 48 hours.
                   </p>
                   <button onClick={() => setShowDanger(false)} className="btn btn-ghost btn-sm">

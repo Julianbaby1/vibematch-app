@@ -1,5 +1,5 @@
 -- =============================================================
---  Second Wind — PostgreSQL Functions
+--  VibeMatch — PostgreSQL Functions
 --  Called from Express backend via supabase.rpc()
 --  All functions use SECURITY DEFINER so they run as the
 --  schema owner and bypass RLS (safe because they are called
@@ -7,40 +7,83 @@
 -- =============================================================
 
 -- ─── Compatibility score ──────────────────────────────────────
--- Returns 0-100 score based on shared interests + prompt overlap
-CREATE OR REPLACE FUNCTION public.compute_compatibility(
-  p_user_id   UUID,
-  p_target_id UUID
-)
+-- v2: weighted VibeCheck questionnaire score (OkCupid-style).
+-- Each user rates how much a question matters:
+--   a_little=1, somewhat=10, very=50, dealbreaker=250
+-- credit: 1.0 for matching answers; scale questions earn partial
+-- credit based on distance between answers.
+-- Each side's satisfaction = earned weight / possible weight.
+-- Final = geometric mean of both sides, 0-100 (fair to both people).
+-- Fallback: legacy shared-interests/prompts heuristic for users
+-- who haven't taken the quiz yet.
+-- NOTE: parameter names are positional-call only (user_a, user_b);
+-- redeploying over the old p_user_id signature requires DROP first.
+DROP FUNCTION IF EXISTS public.compute_compatibility(UUID, UUID);
+CREATE OR REPLACE FUNCTION public.compute_compatibility(user_a UUID, user_b UUID)
 RETURNS INTEGER
 LANGUAGE plpgsql
+STABLE
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
+  pct_a NUMERIC;
+  pct_b NUMERIC;
   v_interest_count INTEGER;
   v_prompt_count   INTEGER;
-  v_score          INTEGER;
 BEGIN
-  -- Count shared interests (case-insensitive)
+  SELECT
+    SUM(t.w_a * t.credit) / NULLIF(SUM(t.w_a), 0),
+    SUM(t.w_b * t.credit) / NULLIF(SUM(t.w_b), 0)
+  INTO pct_a, pct_b
+  FROM (
+    SELECT
+      CASE a.importance WHEN 'a_little' THEN 1 WHEN 'somewhat' THEN 10
+                        WHEN 'very' THEN 50 ELSE 250 END::NUMERIC AS w_a,
+      CASE b.importance WHEN 'a_little' THEN 1 WHEN 'somewhat' THEN 10
+                        WHEN 'very' THEN 50 ELSE 250 END::NUMERIC AS w_b,
+      CASE
+        WHEN a.answer_index = b.answer_index THEN 1
+        WHEN q.is_scale THEN GREATEST(
+          0,
+          1 - ABS(a.answer_index - b.answer_index)::NUMERIC
+              / NULLIF(jsonb_array_length(q.options) - 1, 0)
+        )
+        ELSE 0
+      END AS credit
+    FROM public.user_compatibility_answers a
+    JOIN public.user_compatibility_answers b
+      ON b.question_id = a.question_id AND b.user_id = user_b
+    JOIN public.compatibility_questions q
+      ON q.id = a.question_id AND q.is_active = TRUE
+    WHERE a.user_id = user_a
+  ) t;
+
+  IF pct_a IS NOT NULL AND pct_b IS NOT NULL THEN
+    RETURN ROUND(SQRT(pct_a * pct_b) * 100)::INTEGER;
+  END IF;
+
+  -- Fallback: legacy heuristic (shared interests + shared prompts)
   SELECT COUNT(*) INTO v_interest_count
   FROM public.user_interests ui1
   JOIN public.user_interests ui2
     ON LOWER(ui1.interest) = LOWER(ui2.interest)
-  WHERE ui1.user_id = p_user_id
-    AND ui2.user_id = p_target_id;
+  WHERE ui1.user_id = user_a AND ui2.user_id = user_b;
 
-  -- Count prompts both users answered
   SELECT COUNT(*) INTO v_prompt_count
   FROM public.user_prompt_responses upr1
   JOIN public.user_prompt_responses upr2
     ON upr1.prompt_id = upr2.prompt_id
-  WHERE upr1.user_id = p_user_id
-    AND upr2.user_id = p_target_id;
+  WHERE upr1.user_id = user_a AND upr2.user_id = user_b;
 
-  v_score := LEAST(100, (v_interest_count * 15) + (v_prompt_count * 10));
-  RETURN v_score;
+  RETURN LEAST(100, (v_interest_count * 15) + (v_prompt_count * 10));
 END;
 $$;
+
+-- signed-in users only — never anonymous
+REVOKE EXECUTE ON FUNCTION public.compute_compatibility(UUID, UUID) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.compute_compatibility(UUID, UUID) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.compute_compatibility(UUID, UUID) TO authenticated;
 
 -- ─── Get or build today's daily match queue ───────────────────
 -- Returns up to 5 enriched candidate profiles.

@@ -17,9 +17,9 @@ let activeCandidate = null;
 let activeMatch = null;
 
 const demoProfiles = [
-  { id: "demo-maya", display_name: "Maya", age: 30, city: "Brooklyn", intent: "Long-term", personality_type: "INFJ", bio: "Ceramicist, slow brunch defender, and person who reads every museum plaque.", interests: ["books", "coffee", "design"], compatibility: 93, photo_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80" },
-  { id: "demo-noah", display_name: "Noah", age: 34, city: "Queens", intent: "Intentional dating", personality_type: "INTJ", bio: "Product lead, amateur pasta scientist, excellent parallel parker.", interests: ["cooking", "fitness", "travel"], compatibility: 88, photo_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80" },
-  { id: "demo-sana", display_name: "Sana", age: 33, city: "Manhattan", intent: "Intentional dating", personality_type: "ENTJ", bio: "Founder, boxing class loyalist, softer than my calendar implies.", interests: ["fitness", "travel", "books"], compatibility: 84, photo_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80" }
+  { id: "demo-maya", display_name: "Maya", age: 41, city: "Brooklyn", intent: "Long-term", personality_type: "INFJ", bio: "Ceramicist, slow brunch defender, and person who reads every museum plaque.", interests: ["books", "coffee", "design"], compatibility: 93, photo_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80" },
+  { id: "demo-noah", display_name: "Noah", age: 44, city: "Queens", intent: "Intentional dating", personality_type: "INTJ", bio: "Product lead, amateur pasta scientist, excellent parallel parker.", interests: ["cooking", "fitness", "travel"], compatibility: 88, photo_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80" },
+  { id: "demo-sana", display_name: "Sana", age: 39, city: "Manhattan", intent: "Intentional dating", personality_type: "ENTJ", bio: "Founder, boxing class loyalist, softer than my calendar implies.", interests: ["fitness", "travel", "books"], compatibility: 84, photo_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80" }
 ];
 
 function html(strings, ...values) {
@@ -168,7 +168,7 @@ function renderAuth() {
   document.querySelector("#app").innerHTML = html`
     <main class="auth-screen">
       <section class="auth-panel">
-        <p class="eyebrow">JustMyType</p>
+        <p class="eyebrow">VibeMatch</p>
         <h1>Meet people who match how you actually think.</h1>
         <p>Email sign-in, Supabase profiles, photo uploads, AI embeddings, swipe matching, and chat are ready once your environment is connected.</p>
         ${configured ? html`
@@ -186,7 +186,7 @@ function renderAuth() {
     signIn(new FormData(event.currentTarget).get("email"));
   });
   document.querySelector("#demo-mode")?.addEventListener("click", () => {
-    myProfile = { display_name: "Julia", age: 31, city: "New York", intent: "Intentional dating", personality_type: "ENFP", bio: "Thoughtful and funny, with follow-through.", interests: ["books", "coffee", "design"] };
+    myProfile = { display_name: "Julia", age: 38, city: "New York", intent: "Intentional dating", personality_type: "ENFP", bio: "Thoughtful and funny, with follow-through.", interests: ["books", "coffee", "design"] };
     render();
   });
 }
@@ -195,7 +195,7 @@ function renderShell() {
   document.querySelector("#app").innerHTML = html`
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="brand" href="#discover"><span class="brand-mark">J</span><span><strong>JustMyType</strong><small>dating, less guessing</small></span></a>
+        <a class="brand" href="#discover"><span class="brand-mark">J</span><span><strong>VibeMatch</strong><small>dating, less guessing</small></span></a>
         <nav class="nav-list">
           <button class="nav-link active" data-view="discover">Discover</button>
           <button class="nav-link" data-view="matches">Matches</button>
@@ -290,7 +290,7 @@ function renderProfile() {
       <p class="eyebrow">Your profile</p>
       <div class="form-grid">
         <label>Name <input name="display_name" value="${p.display_name || ""}" required></label>
-        <label>Age <input name="age" type="number" min="18" max="99" value="${p.age || 31}" required></label>
+        <label>Age <input name="age" type="number" min="35" max="99" value="${p.age || 38}" required></label>
         <label>City <input name="city" value="${p.city || ""}" required></label>
         <label>Intent <select name="intent">${["Long-term", "Intentional dating", "New friends first", "Still figuring it out"].map((item) => `<option ${p.intent === item ? "selected" : ""}>${item}</option>`).join("")}</select></label>
         <label>Personality <select name="personality_type">${typeOptions.map((item) => `<option ${p.personality_type === item ? "selected" : ""}>${item}</option>`).join("")}</select></label>

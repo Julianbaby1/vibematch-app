@@ -29,8 +29,8 @@ router.post('/register', async (req, res) => {
   if (!email || !password || !first_name || !date_of_birth) {
     return res.status(400).json({ error: 'Email, password, name, and date of birth are required' });
   }
-  if (ageFromDob(date_of_birth) < 39) {
-    return res.status(400).json({ error: 'Second Wind is for users aged 39 and older' });
+  if (ageFromDob(date_of_birth) < 35) {
+    return res.status(400).json({ error: 'VibeMatch is for users aged 35 and older' });
   }
 
   // 1. Create the Supabase Auth user (admin bypasses email confirmation in dev)

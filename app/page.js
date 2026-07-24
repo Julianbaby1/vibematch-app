@@ -7,15 +7,15 @@ export default function LandingPage() {
       <section className="landing-hero">
         <div style={{ width: '100%' }}>
           <div className="landing-hero-content">
-            <p className="landing-eyebrow">✦ For Adults 39 &amp; Older</p>
+            <p className="landing-eyebrow">✦ For Adults 35 &amp; Older</p>
             <h1 className="landing-title">
-              Where Real<br />
-              <span className="highlight">Connections Begin</span>
+              Dating That Matches<br />
+              <span className="highlight">Your Real Life</span>
             </h1>
             <p className="landing-sub">
-              Second Wind is a thoughtful dating platform built for people ready
-              for meaningful conversation, genuine chemistry, and a fresh start.
-              No swiping. No games. Just real people.
+              VibeMatch is dating that matches your real life, not just your
+              photos. Meaningful conversation, genuine chemistry, and a fresh
+              start. No swiping. No games. Just real people.
             </p>
             <div className="landing-cta">
               <Link href="/register" className="btn btn-primary btn-xl">
@@ -27,7 +27,7 @@ export default function LandingPage() {
             </div>
             <div className="landing-social-proof">
               <span className="social-proof-item">
-                <span>✓</span> <strong>39+</strong> age verified
+                <span>✓</span> <strong>35+</strong> age verified
               </span>
               <span className="social-proof-item">
                 <span>✓</span> <strong>Conversation-first</strong> matching
@@ -131,8 +131,8 @@ export default function LandingPage() {
 
       {/* ── CTA section ── */}
       <div className="landing-cta-section">
-        <h2>Ready for your second wind?</h2>
-        <p>Join thousands of adults 39+ who are done settling and ready for something real.</p>
+        <h2>Ready to find your vibe?</h2>
+        <p>Join adults 35+ who are done settling and ready for something real.</p>
         <Link href="/register" className="btn btn-white btn-xl">
           Get started — it&apos;s free
         </Link>
@@ -140,10 +140,18 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="landing-footer">
-        <p>Second Wind © 2025 · For adults 39+ · Built with intention</p>
-        <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '.75rem', flexWrap: 'wrap' }}>
+        <p>VibeMatch © 2026 · JustMyType.help · Exclusively for adults 35+ · Built with intention</p>
+        <div style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', marginTop: '.75rem', flexWrap: 'wrap' }}>
           <Link href="/login" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Sign in</Link>
           <Link href="/register" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Create account</Link>
+          <Link href="/about" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>About</Link>
+          <Link href="/safety" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Safety Center</Link>
+          <Link href="/community-guidelines" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Community Guidelines</Link>
+          <Link href="/privacy" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Privacy Policy</Link>
+          <Link href="/terms" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Terms of Service</Link>
+          <Link href="/child-safety" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Child Safety Standards</Link>
+          <Link href="/delete-account" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Delete Your Account</Link>
+          <Link href="/contact" style={{ color: 'var(--text-light)', fontSize: '.85rem' }}>Contact</Link>
         </div>
       </footer>
     </>
