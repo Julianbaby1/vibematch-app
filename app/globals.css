@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────
-   Second Wind — Global Design System
+   VibeMatch — Global Design System
    Modern dating app aesthetic: warm, bold, mobile-first
 ───────────────────────────────────────── */
 
@@ -31,7 +31,7 @@
   --text-light:  #9E958C;
 
   /* Feedback */
-  --error:       #C0392B;
+  --error:       #C035+2B;
   --error-lt:    #FDECEA;
   --success:     #1E7A45;
   --success-lt:  #E8F5EE;

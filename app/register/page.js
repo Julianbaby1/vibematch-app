@@ -46,6 +46,25 @@ export default function RegisterPage() {
       });
   }, []);
 
+  // ── Autosave: restore any saved draft on load, save on every change ──
+  const DRAFT_KEY = 'vm_register_draft';
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        setForm((p) => ({ ...p, ...draft, password: '' }));
+        if (typeof draft._step === 'number') setStep(draft._step);
+      }
+    } catch (_) { /* corrupt draft — start fresh */ }
+  }, []);
+  useEffect(() => {
+    try {
+      const { password, ...safe } = form;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...safe, _step: step }));
+    } catch (_) { /* storage full/blocked — non-fatal */ }
+  }, [form, step]);
+
   const set = (field) => (e) => setForm((p) => ({ ...p, [field]: e.target.value }));
 
   function setPromptResponse(promptId, value) {
@@ -67,8 +86,21 @@ export default function RegisterPage() {
       || /load failed|failed to fetch|network/i.test(err?.message || '');
   }
 
+  function ageFromDob(dob) {
+    const d = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+    return age;
+  }
+
   async function handleSubmit() {
     setError('');
+    if (form.date_of_birth && ageFromDob(form.date_of_birth) < 35) {
+      setError('VibeMatch is exclusively for adults 35 and older. Please double-check your date of birth.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -123,6 +155,7 @@ export default function RegisterPage() {
         console.error('[register] GET /api/auth/me failed (non-fatal):', err);
       }
 
+      try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
       router.push('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -138,7 +171,7 @@ export default function RegisterPage() {
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '1rem' }}>
           <span style={{ fontSize: '1.3rem' }}>✦</span>
-          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Second Wind</span>
+          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>VibeMatch</span>
         </div>
         <h1 style={{ marginBottom: '.3rem' }}>Create your profile</h1>
         <p className="subtitle">Step {step + 1} of {STEPS.length} — {STEPS[step]}</p>
@@ -171,7 +204,7 @@ export default function RegisterPage() {
             <div className="form-group">
               <label className="form-label">Date of birth</label>
               <input type="date" className="form-input" value={form.date_of_birth} onChange={set('date_of_birth')} required />
-              <span className="form-hint">You must be 39 or older to join Second Wind</span>
+              <span className="form-hint">You must be 35 or older to join VibeMatch</span>
             </div>
             <button
               className="btn btn-primary btn-full"

@@ -86,7 +86,7 @@ export default function EventsPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div className="page-title" style={{ margin: 0 }}>
               <h1>Local Events</h1>
-              <p>Meet people in real life at events designed for adults 39+.</p>
+              <p>Meet people in real life at events designed for adults 35+.</p>
             </div>
             <button className="btn btn-accent" onClick={() => setShowCreate(!showCreate)}>
               {showCreate ? '✕ Cancel' : '+ Create event'}

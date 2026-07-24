@@ -85,7 +85,7 @@ export default function LoginPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '1.25rem' }}>
           <span style={{ fontSize: '1.3rem' }}>✦</span>
-          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Second Wind</span>
+          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>VibeMatch</span>
         </div>
         <h1 style={{ marginBottom: '.3rem' }}>Welcome back</h1>
         <p className="subtitle">Sign in to continue your journey.</p>
@@ -145,7 +145,7 @@ export default function LoginPage() {
         </form>
 
         <p className="auth-switch">
-          New to Second Wind? <Link href="/register">Create your profile</Link>
+          New to VibeMatch? <Link href="/register">Create your profile</Link>
         </p>
       </div>
     </div>

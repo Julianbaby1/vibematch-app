@@ -1,4 +1,4 @@
--- Second Wind Dating App — PostgreSQL Schema
+-- VibeMatch Dating App — PostgreSQL Schema
 -- Run: psql -U postgres -d second_wind -f schema.sql
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

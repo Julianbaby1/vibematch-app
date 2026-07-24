@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [loading, setLoading]         = useState(true);
   const [actionLoading, setActionLoading] = useState('');
   const [toast, setToast]             = useState(null);
+  const [quiz, setQuiz]               = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -51,6 +52,8 @@ export default function DashboardPage() {
       saveUser(me);
       setDaily(dailyData.filter((d) => d.action === 'pending'));
       setMatches(matchData.slice(0, 5));
+      // Non-fatal: quiz progress powers the VibeCheck banner
+      api.get('/api/questionnaire/status').then(setQuiz).catch(() => {});
     } catch {
       router.replace('/login');
     } finally {
@@ -122,6 +125,28 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* ── VibeCheck nudge ── */}
+          {quiz && quiz.answered < quiz.total && (
+            <div className="card" style={{
+              marginBottom: '1.5rem', display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
+            }}>
+              <div>
+                <h3 style={{ marginBottom: '.25rem' }}>
+                  {quiz.answered === 0 ? '✨ Take the VibeCheck' : '✨ Finish your VibeCheck'}
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '.9rem' }}>
+                  {quiz.answered === 0
+                    ? `${quiz.total} quick questions — your match scores get real once you do.`
+                    : `${quiz.answered} of ${quiz.total} answered. Pick up where you left off.`}
+                </p>
+              </div>
+              <Link href="/questionnaire" className="btn btn-primary">
+                {quiz.answered === 0 ? 'Start the quiz' : 'Continue'}
+              </Link>
+            </div>
+          )}
 
           <div className="dashboard-grid">
             {/* ── Left: Daily profiles ── */}

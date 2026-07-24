@@ -1,17 +1,15 @@
 -- =============================================================
---  Second Wind — Admin role assignment
+--  VibeMatch — Admin role assignment
 --  Run this in the Supabase SQL editor (Project → SQL Editor)
 --  after schema.sql.
 --
---  The app owner's email is granted the admin role automatically.
---  No passwords are stored here — the owner signs up through the
---  normal Supabase Auth flow (signup / login / password reset).
+--  Admin emails are configured privately through the ADMIN_EMAILS
+--  hosting environment variable. No personal email or password is
+--  stored in this public repository.
 --
---  NOTE: this DB-level guarantee covers ONLY the email(s) hardcoded
---  in is_owner_email() below. The Express server reads ADMIN_EMAILS
---  (server/config/admin.js) at signup/login; if you add emails via
---  that env var, add them here too and re-run this script, otherwise
---  they are admin via the app flow but have no DB-level backstop.
+--  The Express server assigns the role at signup/login using that
+--  private environment variable. This SQL keeps the trigger inert
+--  so public source never exposes the owner's email address.
 -- =============================================================
 
 -- ─── Owner email check ────────────────────────────────────────
@@ -19,16 +17,12 @@ CREATE OR REPLACE FUNCTION public.is_owner_email(p_email TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql IMMUTABLE
 AS $$
-  SELECT lower(p_email) IN ('julian_wheeler@icloud.com');
+  SELECT false;
 $$;
 
--- ─── Promote any existing account with the owner email ────────
-UPDATE public.users SET is_admin = true WHERE public.is_owner_email(email);
-
 -- ─── Auto-assign the admin role on signup ─────────────────────
--- Belt-and-braces: the Express register route also sets is_admin,
--- but this trigger guarantees it regardless of how the profile
--- row is created.
+-- The trigger remains safe and inert in the public schema. Admin
+-- assignment is handled by the Express app through ADMIN_EMAILS.
 CREATE OR REPLACE FUNCTION public.assign_admin_role()
 RETURNS TRIGGER
 LANGUAGE plpgsql

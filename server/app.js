@@ -1,5 +1,5 @@
 /**
- * Second Wind — Express application (no listener).
+ * VibeMatch — Express application (no listener).
  *
  * Exported separately so it can run two ways:
  *   1. Standalone server:  `node server/index.js` (local dev / Railway)
@@ -16,6 +16,7 @@ const chatRoutes   = require('./routes/chat');
 const circleRoutes = require('./routes/circles');
 const eventRoutes  = require('./routes/events');
 const adminRoutes  = require('./routes/admin');
+const questionnaireRoutes = require('./routes/questionnaire');
 
 const app = express();
 
@@ -50,9 +51,10 @@ app.use('/api/chat',    chatRoutes);
 app.use('/api/circles', circleRoutes);
 app.use('/api/events',  eventRoutes);
 app.use('/api/admin',   adminRoutes);
+app.use('/api/questionnaire', questionnaireRoutes);
 
 app.get('/api/health', (_, res) =>
-  res.json({ status: 'ok', service: 'Second Wind API', realtime: 'supabase' })
+  res.json({ status: 'ok', service: 'VibeMatch API', realtime: 'supabase' })
 );
 
 module.exports = { app, allowedOrigins };
